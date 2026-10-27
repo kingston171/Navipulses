@@ -81,7 +81,7 @@
       <div class="flex items-center gap-4">
         <div id="maneuverIcon" class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-black">⬆️</div>
         <div>
-          <div id="maneuverDist" class="text-2xl font-black leading-tight">0.0 km</div>
+          <div id="maneuverDist" class="text-2xl font-black leading-tight">-- km</div>
           <div id="maneuverText" class="text-xs font-semibold text-sky-100">Head toward destination</div>
         </div>
       </div>
@@ -151,11 +151,42 @@
     let userCoords = [3.0000, 101.7833];
     let originCoords = null;
     let destCoords = null;
+    let currentRoutePoints = [];
     let isNavigating = false;
     let isDemoMode = false;
     let navInterval = null;
     let soundEnabled = true;
     let searchTimeout = null;
+
+    // Accurate Haversine Distance Calculation (Returns distance in KM)
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Radius of Earth in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    // Calculate total remaining path length from current index
+    function calculateRemainingDistance(points, startIndex) {
+      let totalKm = 0;
+      for (let i = startIndex; i < points.length - 1; i++) {
+        totalKm += getDistanceKm(points[i].lat, points[i].lng, points[i + 1].lat, points[i + 1].lng);
+      }
+      return totalKm;
+    }
+
+    // Format distance nicely: "14.2 km" if >= 1km, "450 m" if < 1km
+    function formatDistanceDisplay(km) {
+      if (km >= 1.0) {
+        return `${km.toFixed(1)} km`;
+      } else {
+        return `${Math.round(km * 1000)} m`;
+      }
+    }
 
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView(userCoords, 15);
@@ -187,6 +218,13 @@
             if (!originCoords) userMarker.setLatLng(userCoords);
             if (!isNavigating && !originCoords) map.panTo(userCoords);
             document.getElementById('speedVal').innerText = Math.round((pos.coords.speed || 0) * 3.6);
+
+            // Update real GPS distance when driving live
+            if (isNavigating && !isDemoMode && currentRoutePoints.length > 0) {
+              const dest = currentRoutePoints[currentRoutePoints.length - 1];
+              const dist = getDistanceKm(userCoords[0], userCoords[1], dest.lat, dest.lng);
+              document.getElementById('maneuverDist').innerText = formatDistanceDisplay(dist);
+            }
           },
           err => console.log('GPS positioning active'),
           { enableHighAccuracy: true }
@@ -282,6 +320,12 @@
             lineCap: 'round'
           }).addTo(map);
 
+          currentRoutePoints = routeLine.getLatLngs();
+
+          // Calculate initial route distance in KM
+          const totalKm = calculateRemainingDistance(currentRoutePoints, 0);
+          document.getElementById('maneuverDist').innerText = formatDistanceDisplay(totalKm);
+
           map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
           document.getElementById('realDriveBtn').classList.remove('hidden');
           document.getElementById('demoDriveBtn').classList.remove('hidden');
@@ -290,6 +334,11 @@
         const fallbackCoords = [startPt, destCoords];
         if (routeLine) map.removeLayer(routeLine);
         routeLine = L.polyline(fallbackCoords, { color: '#38bdf8', weight: 6, dashArray: '8, 8' }).addTo(map);
+        currentRoutePoints = routeLine.getLatLngs();
+        
+        const totalKm = getDistanceKm(startPt[0], startPt[1], destCoords[0], destCoords[1]);
+        document.getElementById('maneuverDist').innerText = formatDistanceDisplay(totalKm);
+
         document.getElementById('realDriveBtn').classList.remove('hidden');
         document.getElementById('demoDriveBtn').classList.remove('hidden');
       }
@@ -305,21 +354,22 @@
 
       speakVoice("Starting navigation. Drive safely.");
 
+      const points = currentRoutePoints;
+
       if (isDemoMode) {
-        const routePoints = routeLine.getLatLngs();
         let stepIdx = 0;
 
         navInterval = setInterval(() => {
-          if (stepIdx < routePoints.length) {
-            const currentPt = routePoints[stepIdx];
+          if (stepIdx < points.length) {
+            const currentPt = points[stepIdx];
             userMarker.setLatLng(currentPt);
             map.setView(currentPt, 18, { animate: true });
 
             document.getElementById('speedVal').innerText = Math.floor(Math.random() * 15) + 40;
 
-            // Display distance in KM
-            const distKm = ((routePoints.length - stepIdx) * 0.03).toFixed(1);
-            document.getElementById('maneuverDist').innerText = `${distKm} km`;
+            // Compute real remaining distance step-by-step
+            const remainingKm = calculateRemainingDistance(points, stepIdx);
+            document.getElementById('maneuverDist').innerText = formatDistanceDisplay(remainingKm);
 
             stepIdx++;
           } else {
@@ -329,6 +379,8 @@
         }, 1000);
       } else {
         map.setView(userCoords, 18);
+        const initialKm = calculateRemainingDistance(points, 0);
+        document.getElementById('maneuverDist').innerText = formatDistanceDisplay(initialKm);
       }
     }
 
