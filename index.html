@@ -81,7 +81,7 @@
       <div class="flex items-center gap-4">
         <div id="maneuverIcon" class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-black">⬆️</div>
         <div>
-          <div id="maneuverDist" class="text-2xl font-black leading-tight">200 m</div>
+          <div id="maneuverDist" class="text-2xl font-black leading-tight">0.0 km</div>
           <div id="maneuverText" class="text-xs font-semibold text-sky-100">Head toward destination</div>
         </div>
       </div>
@@ -125,13 +125,13 @@
           <span class="font-bold text-xs text-slate-800">Police Trap</span>
         </button>
 
-        <!-- Traffic Jam (Traffic Icon) -->
+        <!-- Traffic Jam -->
         <button onclick="reportHazard('jam')" class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col items-center gap-2 hover:bg-amber-500/20 active:scale-95">
           <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 4h8m-8 4h8M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z"/></svg>
           <span class="font-bold text-xs text-slate-800">Traffic Jam</span>
         </button>
 
-        <!-- Crash (Warning Icon) -->
+        <!-- Crash -->
         <button onclick="reportHazard('crash')" class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex flex-col items-center gap-2 hover:bg-rose-500/20 active:scale-95">
           <svg class="w-8 h-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
           <span class="font-bold text-xs text-slate-800">Crash</span>
@@ -160,13 +160,11 @@
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView(userCoords, 15);
 
-      // Clean OpenStreetMap Tile Server with Esri Fallback
-      const mainTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
-      // User location marker
       const userIcon = L.divIcon({
         className: 'user-location-marker',
         html: `<div class="w-8 h-8 bg-sky-500 border-4 border-white rounded-full shadow-2xl flex items-center justify-center text-white font-bold text-xs">▲</div>`,
@@ -318,7 +316,10 @@
             map.setView(currentPt, 18, { animate: true });
 
             document.getElementById('speedVal').innerText = Math.floor(Math.random() * 15) + 40;
-            document.getElementById('maneuverDist').innerText = `${Math.max(10, (routePoints.length - stepIdx) * 30)} m`;
+
+            // Display distance in KM
+            const distKm = ((routePoints.length - stepIdx) * 0.03).toFixed(1);
+            document.getElementById('maneuverDist').innerText = `${distKm} km`;
 
             stepIdx++;
           } else {
