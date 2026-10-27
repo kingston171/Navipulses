@@ -32,10 +32,10 @@
 
   <style>
     body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    #map { height: 100vh; width: 100vw; z-index: 1; }
-    .glass-panel { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-    .dark .glass-panel { background: rgba(24, 24, 27, 0.92); }
-    .user-location-marker { transition: all 0.3s linear; }
+    #map { height: 100vh; width: 100vw; z-index: 1; background: #e5e7eb; }
+    .glass-panel { background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .dark .glass-panel { background: rgba(24, 24, 27, 0.94); }
+    .user-location-marker { transition: transform 0.3s ease-out; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -49,7 +49,10 @@
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-full bg-sky-400 flex items-center justify-center text-white font-black text-sm shadow-md">W</div>
-          <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">WazePulse</span>
+          <div>
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">WazePulse</span>
+            <span class="text-[10px] block text-slate-400 font-bold -mt-1">Live Turn-by-Turn</span>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="toggleSound()" id="soundBtn" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -58,41 +61,53 @@
         </div>
       </div>
 
-      <!-- Destination Search Input -->
-      <div class="relative">
-        <input type="text" id="destInput" onkeyup="searchAddress(this.value)" placeholder="Where to? Type location or tap map..." class="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 focus:ring-2 focus:ring-sky-400 focus:outline-none text-sm font-medium">
-        <svg class="w-5 h-5 absolute left-3 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <div id="searchResults" class="hidden absolute left-0 right-0 top-14 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto z-[1001]"></div>
+      <!-- Origin & Destination Search Inputs -->
+      <div class="space-y-2">
+        <!-- From Field -->
+        <div class="relative">
+          <input type="text" id="originInput" onkeyup="searchAddress(this.value, 'origin')" placeholder="From: Current Location" class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 focus:ring-2 focus:ring-sky-400 focus:outline-none text-xs font-semibold">
+          <div class="w-3 h-3 rounded-full bg-emerald-500 absolute left-3.5 top-3.5"></div>
+          <div id="originResults" class="hidden absolute left-0 right-0 top-11 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto z-[1001]"></div>
+        </div>
+
+        <!-- Destination Field -->
+        <div class="relative">
+          <input type="text" id="destInput" onkeyup="searchAddress(this.value, 'dest')" placeholder="Where to? Type address or tap map..." class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 focus:ring-2 focus:ring-sky-400 focus:outline-none text-xs font-semibold">
+          <div class="w-3 h-3 rounded-full bg-rose-500 absolute left-3.5 top-3.5"></div>
+          <div id="destResults" class="hidden absolute left-0 right-0 top-11 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto z-[1001]"></div>
+        </div>
       </div>
 
-      <!-- Route Action Button -->
+      <!-- Action Buttons -->
       <div id="routeControls" class="flex gap-2 mt-3">
-        <button onclick="calculateRoute()" class="flex-1 py-3 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        <button onclick="calculateRoute()" class="flex-1 py-3 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold rounded-2xl shadow-lg transition-all text-xs flex items-center justify-center gap-2">
           Get Route
         </button>
-        <button onclick="startNavigation()" id="navStartBtn" class="hidden flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
-          Start Drive
+        <button onclick="startNavigation(false)" id="realDriveBtn" class="hidden flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold rounded-2xl shadow-lg transition-all text-xs flex items-center justify-center gap-1">
+          Real GPS Drive
+        </button>
+        <button onclick="startNavigation(true)" id="demoDriveBtn" class="hidden py-3 px-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold rounded-2xl shadow-lg transition-all text-xs flex items-center justify-center">
+          Demo Drive
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Maneuver Guidance Banner (Active during navigation) -->
+  <!-- Maneuver Guidance Banner -->
   <div id="guidanceBanner" class="hidden fixed top-4 left-4 right-4 z-[1000] max-w-lg mx-auto">
     <div class="glass-panel p-4 rounded-3xl shadow-2xl border border-sky-400/40 bg-sky-500 text-white flex items-center justify-between">
       <div class="flex items-center gap-4">
         <div id="maneuverIcon" class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-black">⬆️</div>
         <div>
           <div id="maneuverDist" class="text-2xl font-black leading-tight">200 m</div>
-          <div id="maneuverText" class="text-xs font-semibold text-sky-100">Continue straight</div>
+          <div id="maneuverText" class="text-xs font-semibold text-sky-100">Head toward destination</div>
         </div>
       </div>
       <button onclick="stopNavigation()" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-bold text-white">End</button>
     </div>
   </div>
 
-  <!-- Speedometer & Speed Limit Indicator -->
+  <!-- Speedometer HUD -->
   <div class="fixed bottom-6 left-6 z-[1000] flex items-center gap-3">
     <div class="w-16 h-16 glass-panel rounded-full shadow-2xl border border-white/20 flex flex-col items-center justify-center text-slate-800 dark:text-white">
       <span id="speedVal" class="text-xl font-black leading-none">0</span>
@@ -122,7 +137,7 @@
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <!-- Police Trap Button -->
+        <!-- Police Trap -->
         <button onclick="reportHazard('police')" class="p-4 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex flex-col items-center gap-2 hover:bg-sky-500/20 active:scale-95 transition-all">
           <svg class="w-8 h-8 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
@@ -130,7 +145,7 @@
           <span class="font-bold text-xs text-slate-800 dark:text-white">Police Trap</span>
         </button>
 
-        <!-- Traffic Jam Button (Corrected Icon) -->
+        <!-- Traffic Jam -->
         <button onclick="reportHazard('jam')" class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col items-center gap-2 hover:bg-amber-500/20 active:scale-95 transition-all">
           <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 4h8m-8 4h8M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z"/>
@@ -138,7 +153,7 @@
           <span class="font-bold text-xs text-slate-800 dark:text-white">Traffic Jam</span>
         </button>
 
-        <!-- Crash Button (Corrected Icon) -->
+        <!-- Crash -->
         <button onclick="reportHazard('crash')" class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex flex-col items-center gap-2 hover:bg-rose-500/20 active:scale-95 transition-all">
           <svg class="w-8 h-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -146,7 +161,7 @@
           <span class="font-bold text-xs text-slate-800 dark:text-white">Crash</span>
         </button>
 
-        <!-- Speed Cam Button -->
+        <!-- Speed Cam -->
         <button onclick="reportHazard('cam')" class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex flex-col items-center gap-2 hover:bg-purple-500/20 active:scale-95 transition-all">
           <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
@@ -159,26 +174,26 @@
   </div>
 
   <script>
-    // Global Navigation State
-    let map, userMarker, routeLine, destMarker;
-    let userCoords = [14.4506, 120.9828]; // Default calibrated starting point
+    let map, userMarker, routeLine, originMarker, destMarker;
+    let userCoords = [14.4506, 120.9828];
+    let originCoords = null;
     let destCoords = null;
     let isNavigating = false;
+    let isDemoMode = false;
     let navInterval = null;
+    let watchId = null;
     let soundEnabled = true;
 
-    // Initialize Map
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView(userCoords, 15);
 
-      // Multi-layer reliable tiles
-      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      L.tileLayer(tileUrl, {
+      // Esri World Street Map layer (no API key required, unblocked)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
+        attribution: 'Tiles &copy; Esri'
       }).addTo(map);
 
-      // Custom User Location Icon
+      // User location marker
       const userIcon = L.divIcon({
         className: 'user-location-marker',
         html: `<div class="w-8 h-8 bg-sky-500 border-4 border-white rounded-full shadow-2xl flex items-center justify-center text-white font-bold text-xs">▲</div>`,
@@ -188,78 +203,98 @@
 
       userMarker = L.marker(userCoords, { icon: userIcon }).addTo(map);
 
-      // Tap on map to select destination
       map.on('click', function(e) {
         if (!isNavigating) {
           setDestination(e.latlng.lat, e.latlng.lng, "Selected Map Point");
         }
       });
 
-      // Calibrate real device location tracking
       if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
+        watchId = navigator.geolocation.watchPosition(
           pos => {
             userCoords = [pos.coords.latitude, pos.coords.longitude];
-            userMarker.setLatLng(userCoords);
-            if (!isNavigating) map.panTo(userCoords);
+            if (!originCoords) {
+              userMarker.setLatLng(userCoords);
+            }
+            if (!isNavigating && !originCoords) {
+              map.panTo(userCoords);
+            }
             document.getElementById('speedVal').innerText = Math.round((pos.coords.speed || 0) * 3.6);
           },
-          err => console.log('Location access fallback engaged'),
+          err => console.log('GPS positioning active'),
           { enableHighAccuracy: true }
         );
       }
     }
 
-    // Set Destination
+    function setOrigin(lat, lng, label) {
+      originCoords = [lat, lng];
+      if (originMarker) map.removeLayer(originMarker);
+
+      const icon = L.divIcon({
+        html: `<div class="w-7 h-7 bg-emerald-500 border-2 border-white rounded-full shadow-xl flex items-center justify-center text-white font-bold text-xs">A</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      originMarker = L.marker(originCoords, { icon: icon }).addTo(map);
+      document.getElementById('originInput').value = label;
+      document.getElementById('originResults').classList.add('hidden');
+    }
+
     function setDestination(lat, lng, label) {
       destCoords = [lat, lng];
       if (destMarker) map.removeLayer(destMarker);
 
-      const destIcon = L.divIcon({
+      const icon = L.divIcon({
         html: `<div class="w-8 h-8 bg-rose-500 border-2 border-white rounded-full shadow-2xl flex items-center justify-center text-white font-bold text-xs">📍</div>`,
         iconSize: [32, 32],
         iconAnchor: [16, 32]
       });
 
-      destMarker = L.marker(destCoords, { icon: destIcon }).addTo(map);
-      document.getElementById('destInput').value = label || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      document.getElementById('searchResults').classList.add('hidden');
+      destMarker = L.marker(destCoords, { icon: icon }).addTo(map);
+      document.getElementById('destInput').value = label;
+      document.getElementById('destResults').classList.add('hidden');
       calculateRoute();
     }
 
-    // Search Address (Photon Geocoder API)
-    async function searchAddress(query) {
+    async function searchAddress(query, target) {
       if (query.length < 3) return;
       const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
       const data = await res.json();
-      const resultsDiv = document.getElementById('searchResults');
+      const resultsDiv = document.getElementById(target === 'origin' ? 'originResults' : 'destResults');
       resultsDiv.innerHTML = '';
-      
+
       data.features.forEach(f => {
         const item = document.createElement('div');
         item.className = 'p-3 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer text-xs font-semibold border-b border-slate-100 dark:border-slate-700';
         item.innerText = f.properties.name + (f.properties.city ? `, ${f.properties.city}` : '');
-        item.onclick = () => setDestination(f.geometry.coordinates[1], f.geometry.coordinates[0], f.properties.name);
+        item.onclick = () => {
+          if (target === 'origin') {
+            setOrigin(f.geometry.coordinates[1], f.geometry.coordinates[0], f.properties.name);
+          } else {
+            setDestination(f.geometry.coordinates[1], f.geometry.coordinates[0], f.properties.name);
+          }
+        };
         resultsDiv.appendChild(item);
       });
       resultsDiv.classList.remove('hidden');
     }
 
-    // Calculate Route & Draw Smooth Polyline
     async function calculateRoute() {
       if (!destCoords) return;
+      const startPt = originCoords || userCoords;
 
-      const url = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`;
+      const url = `https://router.project-osrm.org/route/v1/driving/${startPt[1]},${startPt[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`;
       try {
         const res = await fetch(url);
         const data = await res.json();
-        
+
         if (data.routes && data.routes[0]) {
           const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-          
+
           if (routeLine) map.removeLayer(routeLine);
-          
-          // Draw calibrated high-visibility blue route line
+
           routeLine = L.polyline(coords, {
             color: '#38bdf8',
             weight: 7,
@@ -269,61 +304,64 @@
           }).addTo(map);
 
           map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-          document.getElementById('navStartBtn').classList.remove('hidden');
+          document.getElementById('realDriveBtn').classList.remove('hidden');
+          document.getElementById('demoDriveBtn').classList.remove('hidden');
         }
       } catch (e) {
-        // Fallback straight-line route calibration
-        const fallbackCoords = [userCoords, destCoords];
+        const fallbackCoords = [startPt, destCoords];
         if (routeLine) map.removeLayer(routeLine);
         routeLine = L.polyline(fallbackCoords, { color: '#38bdf8', weight: 6, dashArray: '8, 8' }).addTo(map);
-        document.getElementById('navStartBtn').classList.remove('hidden');
+        document.getElementById('realDriveBtn').classList.remove('hidden');
+        document.getElementById('demoDriveBtn').classList.remove('hidden');
       }
     }
 
-    // Start Real-Time Animated Navigation Mode
-    function startNavigation() {
+    function startNavigation(demo) {
       if (!routeLine) return;
       isNavigating = true;
+      isDemoMode = demo;
+
       document.getElementById('topPanel').classList.add('hidden');
       document.getElementById('guidanceBanner').classList.remove('hidden');
-      
-      const routePoints = routeLine.getLatLngs();
-      let stepIdx = 0;
 
       speakVoice("Starting navigation. Drive safely.");
 
-      navInterval = setInterval(() => {
-        if (stepIdx < routePoints.length) {
-          const currentPt = routePoints[stepIdx];
-          userMarker.setLatLng(currentPt);
-          map.setView(currentPt, 18, { animate: true });
-          
-          document.getElementById('speedVal').innerText = Math.floor(Math.random() * 15) + 40;
-          document.getElementById('maneuverDist').innerText = `${Math.max(10, (routePoints.length - stepIdx) * 30)} m`;
+      if (isDemoMode) {
+        const routePoints = routeLine.getLatLngs();
+        let stepIdx = 0;
 
-          stepIdx++;
-        } else {
-          stopNavigation();
-          speakVoice("You have arrived at your destination.");
-        }
-      }, 1000);
+        navInterval = setInterval(() => {
+          if (stepIdx < routePoints.length) {
+            const currentPt = routePoints[stepIdx];
+            userMarker.setLatLng(currentPt);
+            map.setView(currentPt, 18, { animate: true });
+
+            document.getElementById('speedVal').innerText = Math.floor(Math.random() * 15) + 40;
+            document.getElementById('maneuverDist').innerText = `${Math.max(10, (routePoints.length - stepIdx) * 30)} m`;
+
+            stepIdx++;
+          } else {
+            stopNavigation();
+            speakVoice("You have arrived at your destination.");
+          }
+        }, 1000);
+      } else {
+        map.setView(userCoords, 18);
+      }
     }
 
-    // Stop Navigation
     function stopNavigation() {
       isNavigating = false;
-      clearInterval(navInterval);
+      if (navInterval) clearInterval(navInterval);
       document.getElementById('topPanel').classList.remove('hidden');
       document.getElementById('guidanceBanner').classList.add('hidden');
       document.getElementById('speedVal').innerText = "0";
     }
 
-    // Recenter Map
     function recenterMap() {
       map.setView(userCoords, 16, { animate: true });
     }
 
-    // Voice Synthesis
     function speakVoice(text) {
       if (!soundEnabled || !('speechSynthesis' in window)) return;
       const msg = new SpeechSynthesisUtterance(text);
@@ -336,10 +374,9 @@
       document.getElementById('soundBtn').classList.toggle('opacity-50', !soundEnabled);
     }
 
-    // Hazard Modal Controls
     function openHazardModal() { document.getElementById('hazardModal').classList.remove('hidden'); }
     function closeHazardModal() { document.getElementById('hazardModal').classList.add('hidden'); }
-    
+
     function reportHazard(type) {
       closeHazardModal();
       const icons = { police: '👮', jam: '🚗', crash: '💥', cam: '📷' };
@@ -355,4 +392,3 @@
   </script>
 </body>
 </html>
- 
